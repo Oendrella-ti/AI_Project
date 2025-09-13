@@ -1,30 +1,33 @@
 from flask import Flask, request, jsonify, render_template
 import os
-import openai
+from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
 
 # ✅ Load API keys securely from environment variables
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+openai_api_key = os.environ.get("OPENAI_API_KEY")
 pinecone_api_key = os.environ.get("PINECONE_API_KEY")
 
-# ✅ Initialize Flask app
+# ✅ Initialize clients
+client = OpenAI(api_key=openai_api_key)
+pc = Pinecone(api_key=pinecone_api_key)
+
+# ✅ Flask app setup
 app = Flask(__name__)
 
-# ✅ Initialize Pinecone client
-pc = Pinecone(api_key=pinecone_api_key)
-print("Available indexes:", pc.list_indexes())
-
-# ✅ Create or connect to index
+# ✅ Create or connect to Pinecone index
 index_name = "my-chat-index"
-correct_region = "aped-4627-b74a"
+region = "aped-4627-b74a"  # Replace with your actual Pinecone region
+
+# Ensure index exists
 if index_name not in [i['name'] for i in pc.list_indexes()]:
     pc.create_index(
         name=index_name,
         dimension=1536,
         metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region=correct_region)
+        spec=ServerlessSpec(cloud="aws", region=region)
     )
-    
+
+# Connect to the index
 index = pc.Index(index_name)
 
 # ✅ Flask routes
@@ -32,29 +35,13 @@ index = pc.Index(index_name)
 def home():
     return render_template("index.html")
 
+
 @app.route("/chat", methods=["POST"])
 def chat():
     user_input = request.json.get("message")
 
-    # Create embedding
-    embedding = openai.Embedding.create(
+    # Create embedding using OpenAI v1 SDK
+    embedding_response = client.embeddings.create(
         input=user_input,
         model="text-embedding-ada-002"
-    )["data"][0]["embedding"]
-
-    # Query Pinecone
-    results = index.query(vector=embedding, top_k=3, include_metadata=True)
-    context = "\n".join([match["metadata"]["text"] for match in results["matches"]])
-
-    # Prompt GPT
-    prompt = f"Context:\n{context}\n\nUser: {user_input}\nAI:"
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}]
     )
-
-    return jsonify({"response": response["choices"][0]["message"]["content"]})
-
-#@app.route("/ui")
-#def chat_ui():
-    #return render_template("index.html")
