@@ -4,12 +4,12 @@ import openai
 import os
 from pinecone import Pinecone
 from pinecone import ServerlessSpec
-PINECONE_API_KEY = "pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"
+#PINECONE_API_KEY = "pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"
 # Initialize Pinecone instance
-pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+pc = Pinecone(api_key=os.environ.get("pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"))
 
 # Connect to an existing index
-index = pc.Index("your-index-name")
+index = pc.Index("my-chat-index")
 
 app = Flask(__name__)
 
