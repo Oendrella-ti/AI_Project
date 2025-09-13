@@ -16,15 +16,15 @@ print("Available indexes:", pc.list_indexes())
 
 # ✅ Create or connect to index
 index_name = "my-chat-index"
-
-if index_name not in pc.list_indexes():
+correct_region = "aped-4627-b74a"
+if index_name not in [i['name'] for i in pc.list_indexes()]:
     pc.create_index(
         name=index_name,
         dimension=1536,
         metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-east-1")
+        spec=ServerlessSpec(cloud="aws", region=correct_region)
     )
-
+    
 index = pc.Index(index_name)
 
 # ✅ Flask routes
