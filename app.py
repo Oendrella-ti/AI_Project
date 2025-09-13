@@ -5,8 +5,8 @@ import pinecone
 app = Flask(__name__)
 
 # Init API Keys
-openai.api_key = "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"
-pinecone.init(api_key="pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ", environment="gcp-starter")
+openai.api_key = "Open_API_KEY"
+pinecone.init(api_key="Pine_Cone_API_Key", environment="gcp-starter")
 index = pinecone.Index("my-chat-index")
 
 @app.route("/")
