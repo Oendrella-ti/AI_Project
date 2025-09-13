@@ -12,6 +12,7 @@ app = Flask(__name__)
 
 # ✅ Initialize Pinecone client
 pc = Pinecone(api_key=pinecone_api_key)
+print("Available indexes:", pc.list_indexes())
 
 # ✅ Create or connect to index
 index_name = "my-chat-index"
