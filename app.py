@@ -1,6 +1,15 @@
 from flask import Flask, request, jsonify, render_template
 import openai
-import pinecone
+
+import os
+from pinecone import Pinecone
+from pinecone import ServerlessSpec
+PINECONE_API_KEY = "pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"
+# Initialize Pinecone instance
+pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
+
+# Connect to an existing index
+index = pc.Index("your-index-name")
 
 app = Flask(__name__)
 
@@ -8,6 +17,13 @@ app = Flask(__name__)
 openai.api_key = "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"
 pinecone.init(api_key="pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ", environment="aws-starter")
 index = pinecone.Index("my-chat-index")
+
+pc.create_index(                                                                                                                                   
+            name='my-chat-index',                                                                                                                                  
+            dimension=1536,                                                                                                                                
+            metric='cosine',                                                                                                                                  
+            spec=ServerlessSpec(cloud="aws",region="us-east-1")                                                                                                                                        
+        )
 
 @app.route("/")
 def index():
