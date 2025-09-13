@@ -1,47 +1,31 @@
-from flask import Flask, request, jsonify, render_template
-import os
-from openai import OpenAI
-from pinecone import Pinecone, ServerlessSpec
+from flask import Flask, request, render_template, jsonify
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from pinecone_utils import store_query
+import torch
 
-# ✅ Load API keys securely from environment variables
-openai_api_key = os.environ.get("OPENAI_API_KEY")
-pinecone_api_key = os.environ.get("PINECONE_API_KEY")
-
-# ✅ Initialize clients
-client = OpenAI(api_key=openai_api_key)
-pc = Pinecone(api_key=pinecone_api_key)
-
-# ✅ Flask app setup
 app = Flask(__name__)
 
-# ✅ Create or connect to Pinecone index
-index_name = "my-chat-index"
-region = "aped-4627-b74a"  # Replace with your actual Pinecone region
+# Load chatbot model
+tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
+model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
 
-# Ensure index exists
-if index_name not in [i['name'] for i in pc.list_indexes()]:
-    pc.create_index(
-        name=index_name,
-        dimension=1536,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region=region)
-    )
-
-# Connect to the index
-index = pc.Index(index_name)
-
-# ✅ Flask routes
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template('index.html')
 
-
-@app.route("/chat", methods=["POST"])
+@app.route('/chat', methods=['POST'])
 def chat():
-    user_input = request.json.get("message")
+    user_input = request.json['message']
 
-    # Create embedding using OpenAI v1 SDK
-    embedding_response = client.embeddings.create(
-        input=user_input,
-        model="text-embedding-ada-002"
-    )
+    # Generate chatbot response
+    inputs = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors='pt')
+    outputs = model.generate(inputs, max_length=1000, pad_token_id=tokenizer.eos_token_id)
+    response = tokenizer.decode(outputs[:, inputs.shape[-1]:][0], skip_special_tokens=True)
+
+    # Store in Pinecone
+    store_query(user_input, {"id": user_input[:10]})
+
+    return jsonify({'response': response})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

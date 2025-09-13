@@ -1,0 +1,5 @@
+flask
+transformers
+torch
+pinecone-client
+sentence-transformers
