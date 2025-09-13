@@ -28,9 +28,9 @@ if index_name not in [i['name'] for i in pc.list_indexes()]:
 index = pc.Index(index_name)
 
 # ✅ Flask routes
-#@app.route("/")
-#def home():
-    #return "Chatbot running with Pinecone!"
+@app.route("/")
+def home():
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -55,6 +55,6 @@ def chat():
 
     return jsonify({"response": response["choices"][0]["message"]["content"]})
 
-@app.route("/ui")
-def chat_ui():
-    return render_template("index.html")
+#@app.route("/ui")
+#def chat_ui():
+    #return render_template("index.html")
