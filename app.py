@@ -1,44 +1,51 @@
 from flask import Flask, request, jsonify, render_template
-import openai
-
 import os
-from pinecone import Pinecone
-from pinecone import ServerlessSpec
-#PINECONE_API_KEY = "pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"
-# Initialize Pinecone instance
-pc = Pinecone(api_key=os.environ.get("pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ"))
+import openai
+from pinecone import Pinecone, ServerlessSpec
 
-# Connect to an existing index
-index = pc.Index("my-chat-index")
+# ✅ Load API keys securely from environment variables
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+pinecone_api_key = os.environ.get("PINECONE_API_KEY")
 
+# ✅ Initialize Flask app
 app = Flask(__name__)
 
-# Init API Keys
-openai.api_key = "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"
-pinecone.init(api_key="pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ", environment="aws-starter")
-index = pinecone.Index("my-chat-index")
+# ✅ Initialize Pinecone client
+pc = Pinecone(api_key=pinecone_api_key)
 
-pc.create_index(                                                                                                                                   
-            name='my-chat-index',                                                                                                                                  
-            dimension=1536,                                                                                                                                
-            metric='cosine',                                                                                                                                  
-            spec=ServerlessSpec(cloud="aws",region="us-east-1")                                                                                                                                        
-        )
+# ✅ Create or connect to index
+index_name = "my-chat-index"
 
+if index_name not in pc.list_indexes():
+    pc.create_index(
+        name=index_name,
+        dimension=1536,
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1")
+    )
+
+index = pc.Index(index_name)
+
+# ✅ Flask routes
 @app.route("/")
-def index():
-    return render_template("index.html")
+def home():
+    return "Chatbot running with Pinecone!"
 
 @app.route("/chat", methods=["POST"])
 def chat():
     user_input = request.json.get("message")
+
+    # Create embedding
     embedding = openai.Embedding.create(
-        input=user_input, model="text-embedding-ada-002"
+        input=user_input,
+        model="text-embedding-ada-002"
     )["data"][0]["embedding"]
 
+    # Query Pinecone
     results = index.query(vector=embedding, top_k=3, include_metadata=True)
     context = "\n".join([match["metadata"]["text"] for match in results["matches"]])
 
+    # Prompt GPT
     prompt = f"Context:\n{context}\n\nUser: {user_input}\nAI:"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -46,3 +53,7 @@ def chat():
     )
 
     return jsonify({"response": response["choices"][0]["message"]["content"]})
+
+@app.route("/ui")
+def chat_ui():
+    return render_template("index.html")
