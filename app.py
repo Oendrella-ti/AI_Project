@@ -1,0 +1,32 @@
+from flask import Flask, request, jsonify, render_template
+import openai
+import pinecone
+
+app = Flask(__name__)
+
+# Init API Keys
+openai.api_key = "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"
+pinecone.init(api_key="pcsk_51FPJa_RYw8Xpzei3DpqiHsdvyaiSdoFwSX7oY2XhFgCedty8FzCw5FiauTwXSSbEQVnfZ", environment="gcp-starter")
+index = pinecone.Index("my-chat-index")
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_input = request.json.get("message")
+    embedding = openai.Embedding.create(
+        input=user_input, model="text-embedding-ada-002"
+    )["data"][0]["embedding"]
+
+    results = index.query(vector=embedding, top_k=3, include_metadata=True)
+    context = "\n".join([match["metadata"]["text"] for match in results["matches"]])
+
+    prompt = f"Context:\n{context}\n\nUser: {user_input}\nAI:"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return jsonify({"response": response["choices"][0]["message"]["content"]})
