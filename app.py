@@ -1,30 +1,25 @@
 from flask import Flask, request, jsonify, render_template
-from sentence_transformers import SentenceTransformer
 import chromadb
-from chromadb.config import Settings
+from chromadb.utils import embedding_functions
 
-app = Flask(__name__, static_url_path='/static')
+app = Flask(__name__)
 
-# Setup ChromaDB
-client = chromadb.Client(Settings(chroma_db_impl="duckdb+parquet", persist_directory="./chroma_store"))
-collection = client.get_or_create_collection(name="chatbot")
-
-# Embedding model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Set up ChromaDB
+client = chromadb.Client()
+collection = client.get_or_create_collection("chat")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_input = request.json['message']
-    embedding = model.encode([user_input]).tolist()
+@app.route('/ask', methods=['POST'])
+def ask():
+    user_question = request.json.get("question")
 
-    results = collection.query(query_embeddings=embedding, n_results=1)
-    matched = results['documents'][0][0] if results['documents'] else "Sorry, I don't understand."
+    # Dummy response or vector DB query here
+    response = f"Echo: {user_question}"
 
-    return jsonify({'response': matched})
+    return jsonify({"answer": response})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

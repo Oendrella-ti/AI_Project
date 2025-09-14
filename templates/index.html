@@ -2,24 +2,29 @@
 <html>
 <head>
   <title>Chatbot</title>
-  <script>
-    async function sendMessage() {
-      const input = document.getElementById("user_input").value;
-      const res = await fetch("/chat", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: input })
-      });
-      const data = await res.json();
-      document.getElementById("chat_box").innerHTML += `<p><strong>You:</strong> ${input}</p>`;
-      document.getElementById("chat_box").innerHTML += `<p><strong>Bot:</strong> ${data.response}</p>`;
-    }
-  </script>
 </head>
 <body>
-  <h1>Chat with Bot</h1>
-  <div id="chat_box" style="border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll;"></div>
-  <input type="text" id="user_input">
-  <button onclick="sendMessage()">Send</button>
+  <h2>Ask the Chatbot</h2>
+  <input type="text" id="question" placeholder="Your question...">
+  <button onclick="askQuestion()">Ask</button>
+  <p><strong>Response:</strong> <span id="answer"></span></p>
+
+  <script>
+    function askQuestion() {
+      const question = document.getElementById("question").value;
+
+      fetch("/ask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ question })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("answer").innerText = data.answer;
+      });
+    }
+  </script>
 </body>
 </html>
