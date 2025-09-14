@@ -1,31 +1,30 @@
-from flask import Flask, request, render_template, jsonify
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from pinecone_utils import store_query
-import torch
+from flask import Flask, request, jsonify, render_template
+from sentence_transformers import SentenceTransformer
+import chromadb
+from chromadb.config import Settings
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
-# Load chatbot model
-tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
+# Setup ChromaDB
+client = chromadb.Client(Settings(chroma_db_impl="duckdb+parquet", persist_directory="./chroma_store"))
+collection = client.get_or_create_collection(name="chatbot")
+
+# Embedding model
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json['message']
+    embedding = model.encode([user_input]).tolist()
 
-    # Generate chatbot response
-    inputs = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors='pt')
-    outputs = model.generate(inputs, max_length=1000, pad_token_id=tokenizer.eos_token_id)
-    response = tokenizer.decode(outputs[:, inputs.shape[-1]:][0], skip_special_tokens=True)
+    results = collection.query(query_embeddings=embedding, n_results=1)
+    matched = results['documents'][0][0] if results['documents'] else "Sorry, I don't understand."
 
-    # Store in Pinecone
-    store_query(user_input, {"id": user_input[:10]})
-
-    return jsonify({'response': response})
+    return jsonify({'response': matched})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
